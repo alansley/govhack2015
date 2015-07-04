@@ -223,7 +223,7 @@ void draw()
 {
     //mySliderListener.sliderBeingDragged = false;
   
-  map.addMarker( new ImageMarker(ballaratLocation, "1", markerImage) );
+  //map.addMarker( new ImageMarker(ballaratLocation, "1", markerImage) );
   
     // Draw our map
     map.draw();
@@ -297,7 +297,7 @@ void getAccidentsByCondition(String field, long value)
       map.addMarker(m);
     
       // Create the hashmap entry with the accident number as the key
-      markerData.put(dbConnection.getString("ACCIDENT_NO"), m);
+      markerData.put(accidentNum, m);
       
       count++;
      
@@ -344,6 +344,7 @@ void mouseReleased()
     // When the LMB is released then we reset the mouseIsDraggingFlag to false so we draw our target lines
     if (mouseButton == LEFT)
     {
+       mapEventDispatcher.register(map, "pan", map.getId());
        println("Mouse is no longer dragging!");
         mouseIsDragging = false;
     }
@@ -351,6 +352,13 @@ void mouseReleased()
 
 void mousePressed()
 {
+    if (mouseButton == LEFT)
+    {
+      if (cp5.getController("Time (weeks)").isMousePressed())
+      {
+          mapEventDispatcher.unregister(map, "pan", map.getId());
+      }
+    }
     // Add a marker if it's the right mouse button
     if (mouseButton == RIGHT)
     { 
