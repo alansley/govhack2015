@@ -26,12 +26,23 @@ import de.bezier.data.sql.*;
 // import GUI controls lib
 import controlP5.*;
 
+static final int APP_WIDTH = 800;
+static final int APP_HEIGHT = 600;
+
 // Our connection to the database
 MySQL dbConnection;
 
 // Our controlP5 object used for GUI widgets
 ControlP5 cp5;
 
+Filter fCrash, fCrime;
+Group gCrash, gCrime;
+CheckBox cbCrash, cbCrime;
+
+CrimeStalker_DropDown crashDropdown;
+CrimeStalker_DropDown crimeDropdown;
+
+HashMap<String, String> toggleCrashData;
 
 TextPopup textPopup;
 PFont popupFont = createFont("ArialUnicodeMS-16.vlw", 16);
@@ -68,12 +79,11 @@ int currentWeek = 0;
 
 
 // Set up our sketch - runs once at start of execution
-void setup()
-{
+void setup() {
     // Set the window size and use the OpenGL renderer
     // Note: If we want this fullscreen we can use displayWidth and displayHeight.
     //size(displayWidth, displayHeight, OPENGL);
-    size(800, 600, OPENGL);
+    size(APP_WIDTH, APP_HEIGHT, OPENGL);
 
     
     // Enable resizing the sketch window
@@ -81,7 +91,8 @@ void setup()
     
     // Connect to DB
     String user = "root";
-    String pass = "testing123";
+//    String pass = "testing123";
+    String pass = "";
     String host = "localhost";
     String database = "govhack2015";  
     dbConnection = new MySQL(this, host, database, user, pass);
@@ -215,7 +226,87 @@ void setup()
 //    float foo = latitudesTable.getFloat(1);
 //    println("Foo is: " + foo);
 //    
-    
+
+  smooth();
+  cp5.getTooltip().setDelay(500);
+
+  // crash drop down list
+  crashDropdown = new CrimeStalker_DropDown(cp5);
+  crashDropdown.setPosition(0, 13);
+  crashDropdown.setLabel("Crash Records");
+  crashDropdown.setCheckBoxList(generateCrashDropDownData());
+  crashDropdown.setSize(120, 20);
+  crashDropdown.initialize();
+  
+  // crime drop down list
+  crimeDropdown = new CrimeStalker_DropDown(cp5);
+  crimeDropdown.setPosition(APP_WIDTH - 300, 13);
+  crimeDropdown.setLabel("Crime Records");
+  crimeDropdown.setCheckBoxList(generateCrimeDropDownData(dbConnection));
+  crimeDropdown.setSize(270, 20);
+  crimeDropdown.initialize();
+
+
+
+/*
+  fCrash = new Filter();
+  fCrime = new Filter();
+  populateFilterData();
+  
+  gCrash = cp5.addGroup("gCrash")
+                .setPosition(0,13)
+                .setBackgroundColor(color(0,76,153,180))
+                .close()
+                ;
+  gCrash.captionLabel().set("Crashes Records");
+  cbCrash = cp5.addCheckBox("cbCrash")
+                .setColorForeground(color(150))
+                .setColorBackground(color(255))
+                .setColorActive(color(150))
+                .setColorLabel(color(255))
+                .setSize(20, 20)
+                .setItemWidth(10)
+                .setItemHeight(10)
+                .setItemsPerRow(1)
+                .setSpacingColumn(10)
+                .setSpacingRow(5)
+                .setGroup(gCrash)
+                ;
+ int backgroundHeight = 0; 
+ for (int i=0; i<fCrash.getSize(); i++){ 
+   cbCrash.addItem(fCrash.getColumnNameByIndex(i), i); 
+   backgroundHeight += 15;  
+ } 
+ gCrash.setBackgroundHeight(backgroundHeight-3);
+
+  
+  gCrime = cp5.addGroup("gChrime")
+                .setPosition(APP_WIDTH-250,13)
+                .setBackgroundColor(color(0))
+                .setWidth(250)
+                .close()
+                ;
+  gCrime.captionLabel().set("Chrime By Location");
+  cbCrime = cp5.addCheckBox("cbCrime")
+                .setColorForeground(color(150))
+                .setColorBackground(color(255))
+                .setColorActive(color(150))
+                .setColorLabel(color(255))
+                .setSize(20, 20)
+                .setItemWidth(10)
+                .setItemHeight(10)
+                .setItemsPerRow(1)
+                .setSpacingColumn(10)
+                .setSpacingRow(5)
+                .setGroup(gCrime)
+                ;
+ backgroundHeight = 0; 
+ for (int i=0; i<fCrime.getSize(); i++){ 
+   cbCrime.addItem(fCrime.getColumnNameByIndex(i), i); 
+   backgroundHeight += 15;  
+ } 
+ gCrime.setBackgroundHeight(backgroundHeight-3);
+*/
 }
 
 // Runs once per frame
@@ -252,58 +343,88 @@ void drawTargetOverlay()
     ellipse(mouseX, mouseY, 10, 10); 
 }
 
+// draw an individual marker
+void drawMarker(String accidentNo, Float lon, Float lat) {
+  Location loc = new Location(lat, lon);
+  ImageMarker m = new ImageMarker(loc, accidentNo, markerImage);
+  map.addMarker(m);
+  markerData.put(accidentNo, m);
+}
 
-void getAccidentsByCondition(String field, long value)
-{
-  long oneWeekAhead = value + (60L * 60L * 24L * 7L);
+// draw a list of marker data
+int drawMarkerList(HashMap<String, Float[]> data) {
+  int count = 0;
+  Iterator it = data.entrySet().iterator();
+  while (it. hasNext()) {
+    Map.Entry pair = (Map.Entry)it.next();
+    Float[] coord = (Float[])pair.getValue();
+    drawMarker((String)pair.getKey(), coord[0], coord[1]);
+    count++;
+  }
+  return count;
+}
+
+// if timestamp = -1 => use current slider time 
+HashMap<String, Float[]> getAccidentsByCondition(String field, String value, long timestamp) {
+  if (timestamp == -1) {
+    int val = Math.round( cp5.getController("Time (weeks)").getValue() ); 
+    timestamp = Math.round( map(val, 0, 259, minUnixTime, maxUnixTime) );
+  }
+  long oneWeekAhead = timestamp + (60L * 60L * 24L * 7L);
   
   // Query the database
-  String queryString = "SELECT `ACCIDENT_NO`, `LONGITUDE`, `LATITUDE` FROM `accidents` WHERE `" + field + "`>" + value + " AND `" + field + "` < " + oneWeekAhead;
+  String queryString = "SELECT `ACCIDENT_NO`, `LONGITUDE`, `LATITUDE` FROM `accidents` WHERE `UNIX_TIME`>" + timestamp + " AND `UNIX_TIME` < " + oneWeekAhead;
+  if (field != "UNIX_TIME") { queryString += " AND `" + field + "`='" + value + "'"; }
   dbConnection.query(queryString);
+
+  HashMap<String, Float[]> data = new HashMap<String, Float[]>(); 
+  while (dbConnection.next()) {
+    Float[] coord = new Float[2];
+    coord[0] = parseFloat( dbConnection.getString("LONGITUDE") );
+    coord[1] = parseFloat( dbConnection.getString("LATITUDE") );
+    data.put(dbConnection.getString("ACCIDENT_NO"), coord);
+  }
   
+  return data;
+}
+
+HashMap<String, Float[]> getAccidentsByAccidentSelection(ArrayList<String> columns) {
+  int val = Math.round( cp5.getController("Time (weeks)").getValue() ); 
+  long timestamp = Math.round( map(val, 0, 259, minUnixTime, maxUnixTime) );
+  long oneWeekAhead = timestamp + (60L * 60L * 24L * 7L);
+  
+  // Query the database
+  String queryString = "SELECT `ACCIDENT_NO`, `LONGITUDE`, `LATITUDE` FROM `accidents` WHERE `UNIX_TIME`>" + timestamp + " AND `UNIX_TIME` < " + oneWeekAhead;
+  if (columns.size() > 0) {
+    queryString += " AND (`" + columns.get(0) + "`"+toggleCrashData.get(columns.get(0));
+    for (int i = 1; i < columns.size(); i++) {
+      queryString += " OR `" + columns.get(i) + "`"+toggleCrashData.get(columns.get(i));
+    }
+    queryString += ")";
+  }
+  println(queryString);
+  dbConnection.query(queryString);
+
+  HashMap<String, Float[]> data = new HashMap<String, Float[]>(); 
+  while (dbConnection.next()) {
+    Float[] coord = new Float[2];
+    coord[0] = parseFloat( dbConnection.getString("LONGITUDE") );
+    coord[1] = parseFloat( dbConnection.getString("LATITUDE") );
+    data.put(dbConnection.getString("ACCIDENT_NO"), coord);
+  }
+  
+  return data;
+}
+
+void getAccidentsByTimePeriod(long timestamp) {
   // Clear existing markers on the map
   markerData.clear();
+  // remove all existing markers
+  markerManager.clearMarkers();
   
-  int count = 0;
-  
-  markerManager.clearMarkers();    //removeMarkers();
-  
-  while (dbConnection.next() )
-  {  
-      // Create a location object fromthe longitude and latitude  
-      float lon = parseFloat( dbConnection.getString("LONGITUDE") );
-      float lat = parseFloat( dbConnection.getString("LATITUDE")  );
-      Location loc = new Location(lat, lon);
-      
-      String accidentNum = dbConnection.getString("ACCIDENT_NO");
-      
-      
-       ImageMarker m = new ImageMarker(loc, accidentNum, markerImage);
-       
-        //map.addMarker( new ImageMarker(loc, "1", markerImage) );
-       
-      //ScreenPosition screenPos = map.getScreenPosition(loc);
-      //ellipse(loc, 5, 5);
-      
-      //ImageMarker im = new ImageMarker(loc, connection.getString("ACCIDENT_NO"), markerImage);
-      
-      println("Creating marker " + count + " at: " + loc.toString() );
-      
-      //Marker m = new SimplePointMarker(loc);
-      //m.draw();
-      
-      //m.setRadius(5.0f);
-      
-      map.addMarker(m);
-    
-      // Create the hashmap entry with the accident number as the key
-      markerData.put(accidentNum, m);
-      
-      count++;
-     
-  }
-   println("Got record count: " + count);
-  //return data;
+  HashMap<String, Float[]> data = getAccidentsByCondition("UNIX_TIME", "", timestamp);
+  int count = drawMarkerList(data);
+  println("Got record count: " + count);
 }
 
 // ----- Mouse handler functions -----
@@ -396,4 +517,110 @@ void mouseMoved()
   {
     marker.setSelected(true);
   }
+}
+
+void controlEvent(ControlEvent theEvent) {
+  if (theEvent.isGroup()) {
+    if (theEvent.isFrom(crashDropdown.getCheckBox())) {
+      crashCheckBoxHandler(crashDropdown.getCheckBox(), dbConnection);
+      print("crash");
+    } else if (theEvent.isFrom(crimeDropdown.getCheckBox())) {
+      print("crime");
+    }
+  }
+  //println(crashDropdown);
+
+}
+
+void crashCheckBoxHandler(CheckBox cb, MySQL connection) {
+  List items = cb.getItems();
+  ArrayList<String> selectedData = new ArrayList<String>();
+  
+  for (int i = 0; i < items.size(); i++) {
+    Toggle t = (Toggle)items.get(i);
+    if (t.getState()) {
+      selectedData.add(t.getName());
+    }
+  }
+  
+  // Clear existing markers on the map
+  markerData.clear();
+  // remove all existing markers
+  markerManager.clearMarkers();
+
+  HashMap<String, Float[]> data = getAccidentsByAccidentSelection(selectedData);
+  drawMarkerList(data);
+}
+
+String[] generateCrashDropDownData() {
+  String[] names = {"HIT_RUN_FLAG", "RUN_OFFROAD", "FATALITY", "SERIOUSINJURY", "MALES", "FEMALES", "BICYCLIST", "MOTORIST", "PEDESTRIAN", "OLD_DRIVER", "YOUNG_DRIVER", "ALCOHOL_RELATED"};
+  toggleCrashData = new HashMap<String, String>();
+  toggleCrashData.put("HIT_RUN_FLAG", "='YES'");
+  toggleCrashData.put("RUN_OFFROAD", "='YES'");
+  toggleCrashData.put("FATALITY", ">0");
+  toggleCrashData.put("SERIOUSINJURY", ">0");
+  toggleCrashData.put("MALES", ">0");
+  toggleCrashData.put("FEMALES", ">0");
+  toggleCrashData.put("BICYCLIST", ">0");
+  toggleCrashData.put("MOTORIST", ">0");
+  toggleCrashData.put("PEDESTRIAN", ">0");
+  toggleCrashData.put("OLD_DRIVER", ">0");
+  toggleCrashData.put("YOUNG_DRIVER", ">0");
+  toggleCrashData.put("ALCOHOL_RELATED", "='YES'");
+  
+  return names;
+}
+
+String[] generateCrimeDropDownData(MySQL dbConnection) {
+  String query = "SELECT DISTINCT `CSA Offence Subdivision` FROM `crimes`";
+  ArrayList<String> data = new ArrayList<String>();
+  dbConnection.query(query);
+  while (dbConnection.next()) {
+    data.add(dbConnection.getString("CSA Offence Subdivision"));
+  }
+  String[] result = new String[data.size()];
+  for (int i = 0; i < data.size(); i++) {
+    result[i] = data.get(i);
+  }
+  return result;
+}
+
+void populateFilterData(){
+  fCrash.addColumn("ACCIDENT_TYPE");
+  fCrash.addColumn("HIT_RUN_FLAG");
+  fCrash.addColumn("SEVERITY");
+  fCrash.addColumn("FATALITY");
+  fCrash.addColumn("SERIOUS_INJURY");
+  fCrash.addColumn("MALES");
+  fCrash.addColumn("FEMALES");
+  fCrash.addColumn("BYCYCLIST");
+  fCrash.addColumn("PEDESTRIAN");
+  fCrash.addColumn("OLD_DRIVER");
+  fCrash.addColumn("YOUNG_DRIVER");
+  fCrash.addColumn("ALCOHOL_RELATED");
+  fCrime.addColumn("A10 Homicide and related offences");
+  fCrime.addColumn("A20 Assault and related offences");
+  fCrime.addColumn("A30 Sexual offences");
+  fCrime.addColumn("A40 Abduction and related offences");
+  fCrime.addColumn("A50 Robbery");
+  fCrime.addColumn("A60 Blackmail and extortion");
+  fCrime.addColumn("A70 Stalking, harassment and threatening behaviour");
+  fCrime.addColumn("A80 Dangerous and negligent acts endangering people");
+  fCrime.addColumn("B10 Arson");
+  fCrime.addColumn("B20 Property damage");
+  fCrime.addColumn("B30 Burglary/Break and enter");
+  fCrime.addColumn("B40 Theft");
+  fCrime.addColumn("B50 Deception");
+  fCrime.addColumn("C10 Drug dealing and trafficking");
+  fCrime.addColumn("C20 Cultivate or manufacture drugs");
+  fCrime.addColumn("C30 Drug use and possession");
+  fCrime.addColumn("D10 Weapons and explosives offences");
+  fCrime.addColumn("D20 Disorderly and offensive conduct");
+  fCrime.addColumn("D30 Public nuisance offences");
+  fCrime.addColumn("D40 Public security offences");
+  fCrime.addColumn("E10 Justice procedures");
+  fCrime.addColumn("E20 Breaches of orders");
+  fCrime.addColumn("F20 Transport regulation offences");
+  fCrime.addColumn("F30 Other government regulatory offences");
+  fCrime.addColumn("F90 Miscellaneous offences");
 }
