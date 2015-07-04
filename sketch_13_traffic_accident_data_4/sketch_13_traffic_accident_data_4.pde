@@ -51,7 +51,7 @@ float minUnixTime = 0;
 float maxUnixTime = 0;
 
 // Keep a HashMap of all our ImageMarkers
-Map<String, Marker> markerData = new HashMap<String, Marker>();
+Map<String, ImageMarker> markerData = new HashMap<String, ImageMarker>();
 
 // The image for our markers
 PImage markerImage;
@@ -140,8 +140,8 @@ void setup()
     // Nopte: the Unfolding maps API can be found here: http://unfoldingmaps.org/javadoc/index.html
     map = new UnfoldingMap( this, new Google.GoogleMapProvider() );
     
-    markerManager = map.getMarkerManager(0);//new MarkerManager<ImageMarker>();
-    //map.addMarkerManager(markerManager);
+    markerManager = new MarkerManager();
+    map.addMarkerManager(markerManager);
     
     // Specify our initial location and zoom level. Note: Higher zoom values are more zoomed in.
     map.zoomAndPanTo(8, ballaratLocation);
@@ -223,8 +223,12 @@ void draw()
 {
     //mySliderListener.sliderBeingDragged = false;
   
+  map.addMarker( new ImageMarker(ballaratLocation, "1", markerImage) );
+  
     // Draw our map
     map.draw();
+  
+    
   
     // Only draw our target lines if the mouse is not being dragged
     if (!mouseIsDragging)
@@ -263,16 +267,31 @@ void getAccidentsByCondition(String field, long value)
   int count = 0;
   
   markerManager.clearMarkers();    //removeMarkers();
+  
   while (dbConnection.next() )
   {  
       // Create a location object fromthe longitude and latitude  
       float lon = parseFloat( dbConnection.getString("LONGITUDE") );
       float lat = parseFloat( dbConnection.getString("LATITUDE")  );
-      Location loc = new Location(lon, lat);
+      Location loc = new Location(lat, lon);
+      
+      String accidentNum = dbConnection.getString("ACCIDENT_NO");
+      
+      
+       ImageMarker m = new ImageMarker(loc, accidentNum, markerImage);
+       
+        //map.addMarker( new ImageMarker(loc, "1", markerImage) );
+       
+      //ScreenPosition screenPos = map.getScreenPosition(loc);
+      //ellipse(loc, 5, 5);
       
       //ImageMarker im = new ImageMarker(loc, connection.getString("ACCIDENT_NO"), markerImage);
       
-      Marker m = new SimplePointMarker(loc);
+      println("Creating marker " + count + " at: " + loc.toString() );
+      
+      //Marker m = new SimplePointMarker(loc);
+      //m.draw();
+      
       //m.setRadius(5.0f);
       
       map.addMarker(m);

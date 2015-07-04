@@ -9,12 +9,12 @@ class ImageMarker extends AbstractMarker
 {
     PImage img;
 
-    int id;
+    String id;
 
-    public ImageMarker(Location location, int id, PImage img)
+    public ImageMarker(Location location, String accidentNum, PImage img)
     {
 	super(location);
-        this.id = id;
+        id = accidentNum;
   	this.img = img;
     }
 
