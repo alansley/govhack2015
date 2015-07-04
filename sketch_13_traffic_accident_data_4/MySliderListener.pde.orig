@@ -20,7 +20,9 @@ class MySliderListener implements ControlListener
     
       println("Mapped unix time is: " + mappedTime);
       
+//      getAccidentsByCondition("UNIX_TIME", "", mappedTime);
       getAccidentsByTimePeriod(mappedTime);
     }
   }
+
 }

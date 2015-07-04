@@ -1,7 +1,7 @@
 // CrimeStalkers - visualised customisable car accident data over time and allows for
 // comparison with crime data for regions.
 // Created at GovHack 2015, Ballarat - 3rd July 2015 to 5th July 2015.
-// Authors: Al Lansley, Minh Tuan Nguyen, Wentao Zhang
+// Authors: Al Lansley, Min Tuan Nyugen, Wentao Zhang
 // This program is made available as a CC-BY licence:
 // https://creativecommons.org/licenses/by/4.0/
 
@@ -31,18 +31,35 @@ import de.bezier.data.sql.*;
 // Import GUI controls lib
 import controlP5.*;
 
+<<<<<<< HEAD
 static final int APP_WIDTH = 800;
 static final int APP_HEIGHT = 600;
+=======
+// ---------- Globals ----------
+>>>>>>> 2f830a0e7656f2be7badf54027959e9fb3826882
 
 // Our connection to the database
 MySQL dbConnection;
 
 // Our controlP5 object used for GUI widgets
 ControlP5 cp5;
+
+<<<<<<< HEAD
+Filter fCrash, fCrime;
+Group gCrash, gCrime;
+CheckBox cbCrash, cbCrime;
+
 CrimeStalker_DropDown crashDropdown;
 CrimeStalker_DropDown crimeDropdown;
 
 HashMap<String, String> toggleCrashData;
+
+TextPopup textPopup;
+PFont popupFont = createFont("ArialUnicodeMS-16.vlw", 16);
+
+=======
+PFont font = createFont("ArialUnicodeMS-16.vlw", 16); // TODO: Change to a FREE font, not Arial!!!
+>>>>>>> 2f830a0e7656f2be7badf54027959e9fb3826882
 
 // Define the latitude and longitude (in that order!) of Ballarat
 Location ballaratLocation = new Location(-37.5621071f, 143.85614929999997f);
@@ -57,9 +74,6 @@ MarkerManager markerManager;
 // Note: We need these to map the slider values into the range of the accident records themselves
 float minUnixTime = 0;
 float maxUnixTime = 0;
-
-// Keep a HashMap of all our ImageMarkers
-Map<String, ImageMarker> markerData = new HashMap<String, ImageMarker>();
 
 // We'll need to keep track of the sliders mapped-into-unix-time value so we can convert it back into
 // a human-readable date to update the frame title.
@@ -76,7 +90,12 @@ void setup() {
     // Set the window size and use the OpenGL renderer
     // Note: If we want this fullscreen we can use displayWidth and displayHeight.
     //size(displayWidth, displayHeight, OPENGL);
+<<<<<<< HEAD
     size(APP_WIDTH, APP_HEIGHT, OPENGL);
+
+=======
+    size(800, 600, OPENGL);
+>>>>>>> 2f830a0e7656f2be7badf54027959e9fb3826882
     
     // Enable resizing the sketch window
     frame.setResizable(true);
@@ -166,9 +185,22 @@ void setup() {
     // Load our marker image
     markerImage = loadImage("ui/marker_red.png");
     
-    // Instantiate our slider listener and add it to the time slider
-    mySliderListener = new MySliderListener();  
-    cp5.getController("Time (weeks)").addListener(mySliderListener);
+<<<<<<< HEAD
+           
+            //locationList.add(l);  
+            
+            // Create an ImageMarker at this location, with the id value of loop, and using our red marker image
+            //ImageMarker im = new ImageMarker(l, loop, markerImage );
+            
+            // Add the marker image to the map
+            //map.addMarker(im);
+        //}
+    
+    //println(latitudesTable.getString(0));
+//    println(latitudesTable.getString(1));
+//    float foo = latitudesTable.getFloat(1);
+//    println("Foo is: " + foo);
+//    
 
   smooth();
   cp5.getTooltip().setDelay(500);
@@ -188,6 +220,73 @@ void setup() {
   crimeDropdown.setCheckBoxList(generateCrimeDropDownData(dbConnection));
   crimeDropdown.setSize(270, 20);
   crimeDropdown.initialize();
+
+
+
+/*
+  fCrash = new Filter();
+  fCrime = new Filter();
+  populateFilterData();
+  
+  gCrash = cp5.addGroup("gCrash")
+                .setPosition(0,13)
+                .setBackgroundColor(color(0,76,153,180))
+                .close()
+                ;
+  gCrash.captionLabel().set("Crashes Records");
+  cbCrash = cp5.addCheckBox("cbCrash")
+                .setColorForeground(color(150))
+                .setColorBackground(color(255))
+                .setColorActive(color(150))
+                .setColorLabel(color(255))
+                .setSize(20, 20)
+                .setItemWidth(10)
+                .setItemHeight(10)
+                .setItemsPerRow(1)
+                .setSpacingColumn(10)
+                .setSpacingRow(5)
+                .setGroup(gCrash)
+                ;
+ int backgroundHeight = 0; 
+ for (int i=0; i<fCrash.getSize(); i++){ 
+   cbCrash.addItem(fCrash.getColumnNameByIndex(i), i); 
+   backgroundHeight += 15;  
+ } 
+ gCrash.setBackgroundHeight(backgroundHeight-3);
+
+  
+  gCrime = cp5.addGroup("gChrime")
+                .setPosition(APP_WIDTH-250,13)
+                .setBackgroundColor(color(0))
+                .setWidth(250)
+                .close()
+                ;
+  gCrime.captionLabel().set("Chrime By Location");
+  cbCrime = cp5.addCheckBox("cbCrime")
+                .setColorForeground(color(150))
+                .setColorBackground(color(255))
+                .setColorActive(color(150))
+                .setColorLabel(color(255))
+                .setSize(20, 20)
+                .setItemWidth(10)
+                .setItemHeight(10)
+                .setItemsPerRow(1)
+                .setSpacingColumn(10)
+                .setSpacingRow(5)
+                .setGroup(gCrime)
+                ;
+ backgroundHeight = 0; 
+ for (int i=0; i<fCrime.getSize(); i++){ 
+   cbCrime.addItem(fCrime.getColumnNameByIndex(i), i); 
+   backgroundHeight += 15;  
+ } 
+ gCrime.setBackgroundHeight(backgroundHeight-3);
+*/
+=======
+    // Instantiate our slider listener and add it to the time slider
+    mySliderListener = new MySliderListener();  
+    cp5.getController("Time (weeks)").addListener(mySliderListener);
+>>>>>>> 2f830a0e7656f2be7badf54027959e9fb3826882
 }
 
 // Runs once per frame
@@ -214,6 +313,8 @@ void drawTargetOverlay()
     ellipse(mouseX, mouseY, 10, 10); 
 }
 
+<<<<<<< HEAD
+// draw an individual marker
 void drawMarker(String accidentNo, Float lon, Float lat) {
   Location loc = new Location(lat, lon);
   ImageMarker m = new ImageMarker(loc, accidentNo, markerImage);
@@ -241,6 +342,14 @@ HashMap<String, Float[]> getAccidentsByCondition(String field, String value, lon
     timestamp = Math.round( map(val, 0, 259, minUnixTime, maxUnixTime) );
   }
   long oneWeekAhead = timestamp + (60L * 60L * 24L * 7L);
+=======
+// Method to query our database for the "now up to now-plus-7-days worth od accident records" data
+// and add the markers to the map
+void getAccidentsByCondition(String field, long value)
+{
+  // We pass the current unix time of the slider as "value", so that plus 7 days worth of seconds is our query range
+  long oneWeekAhead = value + (60L * 60L * 24L * 7L);
+>>>>>>> 2f830a0e7656f2be7badf54027959e9fb3826882
   
   // Query the database
   String queryString = "SELECT `ACCIDENT_NO`, `LONGITUDE`, `LATITUDE` FROM `accidents` WHERE `UNIX_TIME`>" + timestamp + " AND `UNIX_TIME` < " + oneWeekAhead;
@@ -255,6 +364,7 @@ HashMap<String, Float[]> getAccidentsByCondition(String field, String value, lon
     data.put(dbConnection.getString("ACCIDENT_NO"), coord);
   }
   
+<<<<<<< HEAD
   return data;
 }
 
@@ -295,9 +405,41 @@ void getAccidentsByTimePeriod(long timestamp) {
   HashMap<String, Float[]> data = getAccidentsByCondition("UNIX_TIME", "", timestamp);
   int count = drawMarkerList(data);
   println("Got record count: " + count);
+}
+=======
+  // We'll keep track of how many record we get out of curiosity
+  int count = 0;
+  
+  // Remove all the markers which are currently on the map so we can add the new ones for the changed time period
+  markerManager.clearMarkers();
+  
+  // While we have records...
+  while (dbConnection.next() )
+  {  
+      // Create a location object from the latitude and longitude
+      float lat = parseFloat( dbConnection.getString("LATITUDE")  );  
+      float lon = parseFloat( dbConnection.getString("LONGITUDE") );      
+      Location loc = new Location(lat, lon);
+      
+      // Get the accident number, which is the primary key of the crash event
+      String accidentNum = dbConnection.getString("ACCIDENT_NO");
+    
+      // Create an image marker at this location
+      ImageMarker m = new ImageMarker(loc, accidentNum, markerImage);
+       
+      // Add the marker to the map
+      map.addMarker(m);
+    
+      // Increase our marker count
+      count++;
+  }
+   println("Got record count: " + count);
+
 } // End of getAccidentsByCondition method
+>>>>>>> 2f830a0e7656f2be7badf54027959e9fb3826882
 
 // ----- Mouse handler functions -----
+
 // Mouse dragged fires when a mouse button is held down and the mouse is moved while the button is still down
 void mouseDragged()
 {
@@ -357,11 +499,22 @@ void mousePressed()
     //}   
 }
 
-// We can do stuff if the mouse moves if we want to...
-//void mouseMoved()
-//{
-// 
-//}
+<<<<<<< HEAD
+void mouseMoved()
+{
+    // Deselect all marker
+  for (Marker marker : map.getMarkers()) {
+    marker.setSelected(false);
+  }
+
+  // Select hit marker
+  // Note: Use getHitMarkers(x, y) if you want to allow multiple selection.
+  Marker marker = map.getFirstHitMarker(mouseX, mouseY);
+  if (marker != null)
+  {
+    marker.setSelected(true);
+  }
+}
 
 void controlEvent(ControlEvent theEvent) {
   if (theEvent.isGroup()) {
@@ -428,3 +581,50 @@ String[] generateCrimeDropDownData(MySQL dbConnection) {
   }
   return result;
 }
+
+void populateFilterData(){
+  fCrash.addColumn("ACCIDENT_TYPE");
+  fCrash.addColumn("HIT_RUN_FLAG");
+  fCrash.addColumn("SEVERITY");
+  fCrash.addColumn("FATALITY");
+  fCrash.addColumn("SERIOUS_INJURY");
+  fCrash.addColumn("MALES");
+  fCrash.addColumn("FEMALES");
+  fCrash.addColumn("BYCYCLIST");
+  fCrash.addColumn("PEDESTRIAN");
+  fCrash.addColumn("OLD_DRIVER");
+  fCrash.addColumn("YOUNG_DRIVER");
+  fCrash.addColumn("ALCOHOL_RELATED");
+  fCrime.addColumn("A10 Homicide and related offences");
+  fCrime.addColumn("A20 Assault and related offences");
+  fCrime.addColumn("A30 Sexual offences");
+  fCrime.addColumn("A40 Abduction and related offences");
+  fCrime.addColumn("A50 Robbery");
+  fCrime.addColumn("A60 Blackmail and extortion");
+  fCrime.addColumn("A70 Stalking, harassment and threatening behaviour");
+  fCrime.addColumn("A80 Dangerous and negligent acts endangering people");
+  fCrime.addColumn("B10 Arson");
+  fCrime.addColumn("B20 Property damage");
+  fCrime.addColumn("B30 Burglary/Break and enter");
+  fCrime.addColumn("B40 Theft");
+  fCrime.addColumn("B50 Deception");
+  fCrime.addColumn("C10 Drug dealing and trafficking");
+  fCrime.addColumn("C20 Cultivate or manufacture drugs");
+  fCrime.addColumn("C30 Drug use and possession");
+  fCrime.addColumn("D10 Weapons and explosives offences");
+  fCrime.addColumn("D20 Disorderly and offensive conduct");
+  fCrime.addColumn("D30 Public nuisance offences");
+  fCrime.addColumn("D40 Public security offences");
+  fCrime.addColumn("E10 Justice procedures");
+  fCrime.addColumn("E20 Breaches of orders");
+  fCrime.addColumn("F20 Transport regulation offences");
+  fCrime.addColumn("F30 Other government regulatory offences");
+  fCrime.addColumn("F90 Miscellaneous offences");
+}
+=======
+// We can do stuff if the mouse moves if we want to...
+//void mouseMoved()
+//{
+// 
+//}
+>>>>>>> 2f830a0e7656f2be7badf54027959e9fb3826882

@@ -39,7 +39,7 @@ public class LabeledMarker extends SimplePointMarker {
       pg.fill(highlightColor);
       pg.stroke(highlightStrokeColor);
     } else {
-      pg.fill(color);
+      pg.fill(highlightColor);
       pg.stroke(strokeColor);
     }
     pg.ellipse(x, y, size, size);// TODO use radius in km and convert to px
