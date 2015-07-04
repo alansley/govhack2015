@@ -16,6 +16,9 @@ class MySliderListener implements ControlListener
     
     long mappedTime = Math.round( map(val, 0, 259, minUnixTime, maxUnixTime) );
     
+    // This is in the main sketch
+    sliderUnixTime = mappedTime;
+    
     println("Mapped unix time is: " + mappedTime);
     
     getAccidentsByCondition("UNIX_TIME", mappedTime);

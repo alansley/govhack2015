@@ -1,9 +1,17 @@
+// CrimeStalkers - visualised customisable car accident data over time and allows for
+// comparison with crime data for regions.
+// Created at GovHack 2015, Ballarat - 3rd July 2015 to 5th July 2015.
+// Authors: Al Lansley, Min Tuan Nyugen, Wentao Zhang
+// This program is made available as a CC-BY licence:
+// https://creativecommons.org/licenses/by/4.0/
+
+// Standard java imports
 import java.util.List;
 import java.util.Map;
 import java.util.Iterator;
 import java.util.Random;
 
-// UnfoldingMaps library imports
+// Import UnfoldingMaps classes as req'd
 import de.fhpotsdam.unfolding.UnfoldingMap;
 import de.fhpotsdam.unfolding.geo.Location;
 import de.fhpotsdam.unfolding.utils.MapUtils;
@@ -13,18 +21,17 @@ import de.fhpotsdam.unfolding.interactions.MouseHandler;
 import de.fhpotsdam.unfolding.marker.*;
 import de.fhpotsdam.unfolding.marker.MarkerManager;
 
-// UnfoldingMaps library map providers
+// Import UnfoldingMaps providers
 import de.fhpotsdam.unfolding.providers.Google;
-//import de.fhpotsdam.unfolding.providers.Microsoft;
-
-// giCentre library imports
-import org.gicentre.utils.gui.TextPopup;
+//import de.fhpotsdam.unfolding.providers.Microsoft; // Add providers as req'd...
 
 // Import SQL database connectivity library
 import de.bezier.data.sql.*;
 
-// import GUI controls lib
+// Import GUI controls lib
 import controlP5.*;
+
+// ---------- Globals ----------
 
 // Our connection to the database
 MySQL dbConnection;
@@ -32,40 +39,31 @@ MySQL dbConnection;
 // Our controlP5 object used for GUI widgets
 ControlP5 cp5;
 
-
-TextPopup textPopup;
-PFont popupFont = createFont("ArialUnicodeMS-16.vlw", 16);
-
+PFont font = createFont("ArialUnicodeMS-16.vlw", 16); // TODO: Change to a FREE font, not Arial!!!
 
 // Define the latitude and longitude (in that order!) of Ballarat
 Location ballaratLocation = new Location(-37.5621071f, 143.85614929999997f);
 
-// Our map - wow! much geography! very important! ;-)
+// Declare our map and helper objects
 UnfoldingMap map;
 EventDispatcher mapEventDispatcher;
 MouseHandler mapMouseHandler;
-//MarkerManager<ImageMarker> markerManager = new MarkerManager<ImageMarker>();
-MarkerManager markerManager = new MarkerManager();
+MarkerManager markerManager;
 
+// These will be the minimum and maximum (i.e. earliest and latest) times for our car accident records
+// Note: We need these to map the slider values into the range of the accident records themselves
 float minUnixTime = 0;
 float maxUnixTime = 0;
 
-// Keep a HashMap of all our ImageMarkers
-Map<String, ImageMarker> markerData = new HashMap<String, ImageMarker>();
+// We'll need to keep track of the sliders mapped-into-unix-time value so we can convert it back into
+// a human-readable date to update the frame title.
+long sliderUnixTime = 0;
 
 // The image for our markers
 PImage markerImage;
 
-//MySliderListener mySliderListener;
-
 // We'll keep track of whether the mouse is being dragged (i.e. LMB down + mouse movement)
 boolean mouseIsDragging = false;
-
-int currentWeek = 0;
-
-// This is the list of our markers
-//List<Location> locationList = new ArrayList<Location>();
-
 
 // Set up our sketch - runs once at start of execution
 void setup()
@@ -74,24 +72,26 @@ void setup()
     // Note: If we want this fullscreen we can use displayWidth and displayHeight.
     //size(displayWidth, displayHeight, OPENGL);
     size(800, 600, OPENGL);
-
     
     // Enable resizing the sketch window
     frame.setResizable(true);
     
-    // Connect to DB
+    // Connect to our database
     String user = "root";
     String pass = "testing123";
     String host = "localhost";
     String database = "govhack2015";  
     dbConnection = new MySQL(this, host, database, user, pass);
     dbConnection.connect();
+    // TODO: Need to spit some debug here if the DB connection fails!
     
+    // Get the lowest unix time from all our car accident records (i.e. the earliest record)
     dbConnection.query("SELECT MIN(`UNIX_TIME`) AS `min`FROM `accidents` WHERE `UNIX_TIME` != ''");
     dbConnection.next();
     minUnixTime = Long.parseLong( dbConnection.getString("min") );
     println("min unix: " + minUnixTime);
     
+    // Get the highest unix time from all our car accident records (i.e. the latest record)
     dbConnection.query("SELECT MAX(`UNIX_TIME`) AS `max` FROM `accidents` WHERE `UNIX_TIME` != ''");
     dbConnection.next();
     maxUnixTime = Long.parseLong( dbConnection.getString("max") );
@@ -102,22 +102,14 @@ void setup()
      
      // Add our time slider
      cp5.addSlider("Time (weeks)")
-     .setPosition(150, 560)
-     .setWidth(500)
-     .setRange(0, 259)                // Week number (260 weeks in 5 years)
-     .setValue(130)                   // Default we'll start half way
-     .setNumberOfTickMarks(26)
-     .setSliderMode(Slider.FLEXIBLE)
+     .setPosition(width * 0.1f, height * 0.9f) // Slider starts 10% across, 90% down
+     .setWidth( Math.round(width * 0.8f) )     // Slider is 80% width of the screen
+     .setRange(0, 259)                         // Week number (260 weeks in 5 years)
+     .setValue(130)                            // Default we'll start half way
+     .setNumberOfTickMarks(260)
+     .snapToTickMarks(true)
+     .setSliderMode(Slider.FLEXIBLE)           // Show grabable 'triangle' on slider
      ;
-     
-    
-    
-    // Setup a text popup to experiment with...
-//    textPopup = new TextPopup(this, popupFont, width / 4, height / 4);
-//    textPopup.setTextSize(16);
-//    textPopup.setInternalMargin(10, 10);
-//    textPopup.addText("Foobar! Woop-woop! =P");
-//    textPopup.setIsActive(true);
     
     // ----- Map setup -----    
     
@@ -137,9 +129,18 @@ void setup()
       */
   
     // Create our map
-    // Nopte: the Unfolding maps API can be found here: http://unfoldingmaps.org/javadoc/index.html
+    // Note: the Unfolding maps API can be found here: http://unfoldingmaps.org/javadoc/index.html
     map = new UnfoldingMap( this, new Google.GoogleMapProvider() );
     
+    // Instantiate our event dispatcher and mouse handler, tie the mouse handler to this sketch and this map,
+    // then add the mouse handler to the map event dispatcher 
+    mapEventDispatcher = new EventDispatcher();
+    mapMouseHandler = new MouseHandler(this, map);
+    mapEventDispatcher.addBroadcaster(mapMouseHandler);
+    
+    // Instantiate our marker manager and add it to the map
+    // Note: We need a specific, named marker manager to be able to clear all the markers on the map
+    // when the slider value changes
     markerManager = new MarkerManager();
     map.addMarkerManager(markerManager);
     
@@ -152,91 +153,26 @@ void setup()
     // Specify that we cannot pan to more than 20km away from this point
     //map.setPanningRestriction(ballaratLocation, 20.0f);
     
-    // Dispatch events from this sketch to our map object as appropriate
-    //MapUtils.createDefaultEventDispatcher(this, map);
-    
-    //EventDispatcher mapEventDispatcher = MapUtils.createDefaultEventDispatcher(this, map);
-    
-    //MapEventBroadcaster myMapEventBroadcaster = new MapEventBroadcaster(mapEventDispatcher, map); 
-    
-    //myMapEventBroadcaster.setEventDispatcher(mapEventDispatcher);
-    
-    //EventDispatcher mapEventDispatcher = MapUtils.createDefaultEventDispatcher(this, map); 
-    mapEventDispatcher = new EventDispatcher();
-    // Add mouse interaction to both maps
-    mapMouseHandler = new MouseHandler(this, map);
-    mapEventDispatcher.addBroadcaster(mapMouseHandler);
-    
+    // Register panning and zooming of the map
     mapEventDispatcher.register(map, "pan", map.getId());
-    //mapEventDispatcher.unregister(map, "pan", map.getId() ); // THIS WILL WORK NOW!
     mapEventDispatcher.register(map, "zoom");
-    
-    mySliderListener = new MySliderListener();//mapEventDispatcher, map);  
-    cp5.getController("Time (weeks)").addListener(mySliderListener);
-    
-    // Create a marker for Ballarat
-    // Note: ui marker options are "ui/marker.png", "ui/marker_red.png" or "ui/marker_gray.png"
-    //ImageMarker ballaratMarker = new ImageMarker(ballaratLocation, loadImage("ui/marker_red.png") );
-    
-   
-    
-    // Add our ballarat marker to the map
-    // Note: We can use map.addMarkers(marker1, marker2, marker3, ..., markerX); if we want to add a bunch at once
-    //map.addMarker(ballaratMarker);
-    
-    // ------ Load accident table -----
-    
-    //latitudesTable = new Table("LATITUDE.txt");
-    
-    //println("Number of rows in lattitudes: " + latitudesTable.getRowCount() );
-    //String test = latitudesTable.getString(0);
-    
-    //latValues = loadStrings("LATITUDE.txt");
-    //lonValues = loadStrings("LONGITUDE.txt");
-    
-    //int latCount = latValues.length;
-    //int lonCount = lonValues.length;
     
     // Load our marker image
     markerImage = loadImage("ui/marker_red.png");
     
-           
-            //locationList.add(l);  
-            
-            // Create an ImageMarker at this location, with the id value of loop, and using our red marker image
-            //ImageMarker im = new ImageMarker(l, loop, markerImage );
-            
-            // Add the marker image to the map
-            //map.addMarker(im);
-        //}
-    
-    //println(latitudesTable.getString(0));
-//    println(latitudesTable.getString(1));
-//    float foo = latitudesTable.getFloat(1);
-//    println("Foo is: " + foo);
-//    
-    
+    // Instantiate our slider listener and add it to the time slider
+    mySliderListener = new MySliderListener();  
+    cp5.getController("Time (weeks)").addListener(mySliderListener);
 }
 
 // Runs once per frame
 void draw()
 {
-    //mySliderListener.sliderBeingDragged = false;
-  
-  //map.addMarker( new ImageMarker(ballaratLocation, "1", markerImage) );
-  
     // Draw our map
     map.draw();
   
-    
-  
     // Only draw our target lines if the mouse is not being dragged
-    if (!mouseIsDragging)
-    {
-        drawTargetOverlay();
-    }
-    
-    
+    if (!mouseIsDragging) { drawTargetOverlay(); }
 }
 
 void drawTargetOverlay()
@@ -244,67 +180,55 @@ void drawTargetOverlay()
     // Set stroke to red
     stroke(255,0,0);  
     
-    line(mouseX, 0, mouseX, height);  // Vertical line centred on mouseY
-    line(0, mouseY, width, mouseY);   // Horizontal line centred on mouseX
+    // Draw a vertical line centred on mouseY and a horizontal line centred on mouseX
+    line(mouseX, 0, mouseX, height);  
+    line(0, mouseY, width, mouseY);
   
-    // Draw an ellipse in the centre of the window
+    // Draw an ellipse in the centre of the window in semi-transparent white
     fill(255,255,255,128);
     ellipse(mouseX, mouseY, 10, 10); 
 }
 
-
+// Method to query our database for the "now up to now-plus-7-days worth od accident records" data
+// and add the markers to the map
 void getAccidentsByCondition(String field, long value)
 {
+  // We pass the current unix time of the slider as "value", so that plus 7 days worth of seconds is our query range
   long oneWeekAhead = value + (60L * 60L * 24L * 7L);
   
   // Query the database
   String queryString = "SELECT `ACCIDENT_NO`, `LONGITUDE`, `LATITUDE` FROM `accidents` WHERE `" + field + "`>" + value + " AND `" + field + "` < " + oneWeekAhead;
   dbConnection.query(queryString);
   
-  // Clear existing markers on the map
-  markerData.clear();
-  
+  // We'll keep track of how many record we get out of curiosity
   int count = 0;
   
-  markerManager.clearMarkers();    //removeMarkers();
+  // Remove all the markers which are currently on the map so we can add the new ones for the changed time period
+  markerManager.clearMarkers();
   
+  // While we have records...
   while (dbConnection.next() )
   {  
-      // Create a location object fromthe longitude and latitude  
-      float lon = parseFloat( dbConnection.getString("LONGITUDE") );
-      float lat = parseFloat( dbConnection.getString("LATITUDE")  );
+      // Create a location object from the latitude and longitude
+      float lat = parseFloat( dbConnection.getString("LATITUDE")  );  
+      float lon = parseFloat( dbConnection.getString("LONGITUDE") );      
       Location loc = new Location(lat, lon);
       
+      // Get the accident number, which is the primary key of the crash event
       String accidentNum = dbConnection.getString("ACCIDENT_NO");
-      
-      
-       ImageMarker m = new ImageMarker(loc, accidentNum, markerImage);
+    
+      // Create an image marker at this location
+      ImageMarker m = new ImageMarker(loc, accidentNum, markerImage);
        
-        //map.addMarker( new ImageMarker(loc, "1", markerImage) );
-       
-      //ScreenPosition screenPos = map.getScreenPosition(loc);
-      //ellipse(loc, 5, 5);
-      
-      //ImageMarker im = new ImageMarker(loc, connection.getString("ACCIDENT_NO"), markerImage);
-      
-      println("Creating marker " + count + " at: " + loc.toString() );
-      
-      //Marker m = new SimplePointMarker(loc);
-      //m.draw();
-      
-      //m.setRadius(5.0f);
-      
+      // Add the marker to the map
       map.addMarker(m);
     
-      // Create the hashmap entry with the accident number as the key
-      markerData.put(accidentNum, m);
-      
+      // Increase our marker count
       count++;
-     
   }
    println("Got record count: " + count);
-  //return data;
-}
+
+} // End of getAccidentsByCondition method
 
 // ----- Mouse handler functions -----
 
@@ -313,26 +237,25 @@ void mouseDragged()
 {
     if (mouseButton == LEFT)
     {
+        // Update the window title with the date (converted back from the unix time of the slider)
+        // TODO: Make sure this is Australia/Melbourne timezone correct!!!
+        java.util.Date dateTime = new java.util.Date((long)sliderUnixTime * 1000);
+        frame.setTitle("Current date range: " + dateTime + " to +7 days");
+        
         // Set our flag
         mouseIsDragging = true;
         
         if (mySliderListener.sliderBeingDragged)
         {
-          println("WHHHHHHHHHHHYYYYYYYYYYYYYYYYY?!?!?!");
-          //mapEventDispatcher.unregister(map, "pan", "1");
-          //mapEventDispatcher.unregister(map, "pan");
-          //mapEventDispatcher.unregister(map, "zoom");
-          //mapEventDispatcher.removeBroadcaster(mapMouseHandler);
+          //
         }
         
         // Change the mouse cursor to the MOVE cursor while the mouse is being dragged 
-         cursor(MOVE);
+        cursor(MOVE);
     }
     
     // Can also get the LMB like this if req'd:
     // else if (mouseButton != RIGHT) { }
-  
-   //textPopup.draw();
 }
 
 // Mouse clicked fires when a mouse button is released
@@ -344,8 +267,8 @@ void mouseReleased()
     // When the LMB is released then we reset the mouseIsDraggingFlag to false so we draw our target lines
     if (mouseButton == LEFT)
     {
-       mapEventDispatcher.register(map, "pan", map.getId());
-       println("Mouse is no longer dragging!");
+        // Regist the map panning handler again when we release the LMB
+        mapEventDispatcher.register(map, "pan", map.getId());
         mouseIsDragging = false;
     }
 }
@@ -354,46 +277,22 @@ void mousePressed()
 {
     if (mouseButton == LEFT)
     {
+      // If we have pressed the mouse over the slider then unregister panning on the map
       if (cp5.getController("Time (weeks)").isMousePressed())
       {
           mapEventDispatcher.unregister(map, "pan", map.getId());
       }
     }
-    // Add a marker if it's the right mouse button
-    if (mouseButton == RIGHT)
-    { 
-      /*
-        // Get the location of the mouse click on the map as a geographic location   
-        Location clickLatLon = map.getLocation(mouseX, mouseY);
-      
-        // Create a marker at this location
-        ImageMarker clickMarker = new ImageMarker(clickLatLon, loadImage("ui/marker_red.png") );
-        
-        // Add the new marker to our list of markers
-        markerList.add(clickMarker);
-      
-        // Also add the new marker to the map
-        map.addMarker(clickMarker);
-      
-        // Pan to the location of the click
-        // Note: tweening must be enabled on the map via "map.setTweening(true);" for this to animate - if tweening is off we will immediately snap to the location.   
-        map.panTo(mouseX, mouseY);
-        */
-    }   
+    
+    // We can do stuff with the RMB if we want to...
+    //if (mouseButton == RIGHT)
+    //{ 
+    //  // Do stuff...
+    //}   
 }
 
-void mouseMoved()
-{
-    // Deselect all marker
-  for (Marker marker : map.getMarkers()) {
-    marker.setSelected(false);
-  }
-
-  // Select hit marker
-  // Note: Use getHitMarkers(x, y) if you want to allow multiple selection.
-  Marker marker = map.getFirstHitMarker(mouseX, mouseY);
-  if (marker != null)
-  {
-    marker.setSelected(true);
-  }
-}
+// We can do stuff if the mouse moves if we want to...
+//void mouseMoved()
+//{
+// 
+//}
