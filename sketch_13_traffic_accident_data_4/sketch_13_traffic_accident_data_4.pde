@@ -90,6 +90,12 @@ void setup()
     dbConnection.query("SELECT MIN(`UNIX_TIME`) AS `min`FROM `accidents` WHERE `UNIX_TIME` != ''");
     dbConnection.next();
     minUnixTime = Long.parseLong( dbConnection.getString("min") );
+    println("min unix: " + minUnixTime);
+    
+    dbConnection.query("SELECT MAX(`UNIX_TIME`) AS `max` FROM `accidents` WHERE `UNIX_TIME` != ''");
+    dbConnection.next();
+    maxUnixTime = Long.parseLong( dbConnection.getString("max") );
+    println("max unix: " + maxUnixTime);
  
      // Instantiate our cp5 GUI controls object
      cp5 = new ControlP5(this);
@@ -161,8 +167,8 @@ void setup()
     mapMouseHandler = new MouseHandler(this, map);
     mapEventDispatcher.addBroadcaster(mapMouseHandler);
     
-    mapEventDispatcher.register(map, "pan");
-    //mapEventDispatcher.unregister(map, "pan", "1"); // THIS DOES NOT WORK =(((((
+    mapEventDispatcher.register(map, "pan", map.getId());
+    //mapEventDispatcher.unregister(map, "pan", map.getId() ); // THIS WILL WORK NOW!
     mapEventDispatcher.register(map, "zoom");
     
     mySliderListener = new MySliderListener();//mapEventDispatcher, map);  
@@ -243,14 +249,18 @@ void drawTargetOverlay()
 }
 
 
-void getAccidentsByCondition(String field, String value)
+void getAccidentsByCondition(String field, long value)
 {
+  long oneWeekAhead = value + (60L * 60L * 24L * 7L);
+  
   // Query the database
-  String queryString = "SELECT `ACCIDENT_NO`, `LONGITUDE`, `LATITUDE` FROM `accidents` WHERE `" + field + "`='" + value + "'";
+  String queryString = "SELECT `ACCIDENT_NO`, `LONGITUDE`, `LATITUDE` FROM `accidents` WHERE `" + field + "`>" + value + " AND `" + field + "` < " + oneWeekAhead;
   dbConnection.query(queryString);
   
   // Clear existing markers on the map
   markerData.clear();
+  
+  int count = 0;
   
   markerManager.clearMarkers();    //removeMarkers();
   while (dbConnection.next() )
@@ -269,7 +279,11 @@ void getAccidentsByCondition(String field, String value)
     
       // Create the hashmap entry with the accident number as the key
       markerData.put(dbConnection.getString("ACCIDENT_NO"), m);
+      
+      count++;
+     
   }
+   println("Got record count: " + count);
   //return data;
 }
 

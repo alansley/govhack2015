@@ -10,7 +10,15 @@ class MySliderListener implements ControlListener
     
     
     sliderBeingDragged = true;
-    println("i got an event from mySlider, gotvalue: " + theEvent.getController().getValue());
+    
+    int  val = Math.round( theEvent.getController().getValue() );
+    println("i got an event from mySlider, gotvalue: " + val);
+    
+    long mappedTime = Math.round( map(val, 0, 259, minUnixTime, maxUnixTime) );
+    
+    println("Mapped unix time is: " + mappedTime);
+    
+    getAccidentsByCondition("UNIX_TIME", mappedTime);
   }
 
 }
