@@ -107,7 +107,7 @@ void setup() {
      cp5 = new ControlP5(this);
      
      // Add our time slider
-     cp5.addSlider("Time (weeks)")
+     Slider s = cp5.addSlider("Time (weeks)")
      .setPosition(width * 0.1f, height * 0.9f) // Slider starts 10% across, 90% down
      .setWidth( Math.round(width * 0.8f) )     // Slider is 80% width of the screen
      .setRange(0, 259)                         // Week number (260 weeks in 5 years)
@@ -116,6 +116,17 @@ void setup() {
      .snapToTickMarks(true)
      .setSliderMode(Slider.FLEXIBLE)           // Show grabable 'triangle' on slider
      ;
+     s.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingX(0);
+     PFont sliderFont = createFont("Aaargh.ttf", 15);
+     s.getCaptionLabel().setFont(sliderFont)
+                         .setColor(color(255, 255, 255))
+                         .enableColorBackground()
+                         .setColorBackground(color(0, 0, 0, 200))
+                         .setSize(50)
+                         .setHeight(30)
+                         .setText("Please specify a time");
+                         
+//     s.setCaptionLabel("Please specify a time");
     
     // ----- Map setup -----    
     

@@ -21,6 +21,7 @@ class MySliderListener implements ControlListener
       println("Mapped unix time is: " + mappedTime);
       
       getAccidentsByTimePeriod(mappedTime);
+      theEvent.getController().getCaptionLabel().setText(mappedTime + " Crash Total: " + 1);
     }
   }
 }
