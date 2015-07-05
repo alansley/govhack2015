@@ -16,13 +16,13 @@ Crime statistics: http://www.crimestatistics.vic.gov.au/
 #Development Installation Instruction
 1. Download and install Processing 2.2.1 from https://www.processing.org/download/
 
-2. Install the following addition libraries: BezierSQLLib, ControlP5, Unfolding Maps
+2. Install the following additional libraries(you can install it in Processing IDE): BezierSQLLib, ControlP5, Unfolding Maps
 
 3. Make sure you have MySQL server installed
 
 4. create a database named govhack2015 (or any other name, the settings is inside the code (sketch_CrimeStalker.pde))
 
-5. execute query.sql in the package
+5. execute query.sql in the package, which will insert all data into the database
 
 6. change the settings in sketch_CrimeStalker.pde to make the software communicates with the database
 
