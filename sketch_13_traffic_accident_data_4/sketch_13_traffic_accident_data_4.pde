@@ -175,18 +175,18 @@ void setup() {
 
   // crash drop down list
   crashDropdown = new CrimeStalker_DropDown(cp5);
-  crashDropdown.setPosition(0, 13);
+  crashDropdown.setPosition(20, 13);
   crashDropdown.setLabel("Crash Records");
   crashDropdown.setCheckBoxList(generateCrashDropDownData());
-  crashDropdown.setSize(120, 20);
+  crashDropdown.setSize(120, 13);
   crashDropdown.initialize();
   
   // crime drop down list
   crimeDropdown = new CrimeStalker_DropDown(cp5);
-  crimeDropdown.setPosition(APP_WIDTH - 300, 13);
+  crimeDropdown.setPosition(APP_WIDTH - 320, 13);
   crimeDropdown.setLabel("Crime Records");
   crimeDropdown.setCheckBoxList(generateCrimeDropDownData(dbConnection));
-  crimeDropdown.setSize(270, 20);
+  crimeDropdown.setSize(300, 13);
   crimeDropdown.initialize();
 }
 

@@ -42,22 +42,28 @@ class CrimeStalker_DropDown {
   }
   
   public void initialize() {
+    PFont font;
+    font = createFont("Aaargh.ttf", 10);
+    
+    this.parent.setFont(font);
+    
     this.g = this.parent.addGroup(this.label + "_group")
                   .setPosition(this.positionX, this.positionY)
                   .setWidth(this.sizeX)
-                  .setBackgroundColor(color(0,76,153,180))
+                  .setBarHeight(this.sizeY)
+                  .setBackgroundColor(color(0,0,0, 225))
                   .close();
     this.g.captionLabel().set(this.label);
-    this.g.setBackgroundHeight(15 * this.checkboxList.length);
+    this.g.setBackgroundHeight(17 * this.checkboxList.length);
     this.cb = this.parent.addCheckBox(this.label + "_checkbox")
                   .setColorForeground(color(150))
                   .setColorBackground(color(202, 225, 255))
                   .setColorActive(color(0, 151, 35))
-                  .setColorLabel(color(119, 119, 119))
+                  .setColorLabel(color(255, 255, 255))
                   .setColorValue(color(150, 0, 0))
                   .setSize(20, 20)
                   .setItemWidth(10)
-                  .setItemHeight(10)
+                  .setItemHeight(12)
                   .setItemsPerRow(1)
                   .setSpacingColumn(10)
                   .setSpacingRow(5)
@@ -68,3 +74,4 @@ class CrimeStalker_DropDown {
     }
   }
 }
+
